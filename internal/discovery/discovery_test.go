@@ -306,11 +306,19 @@ func TestWithinRootAbs(t *testing.T) {
 	if err := os.MkdirAll(sub, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	inside, err := WithinRootAbs(root, filepath.Join(root, "sub", "x.md"))
+	// WithinRootAbs requires candidate to be symlink-resolved. Temp roots can
+	// themselves contain platform aliases (for example /var -> /private/var on
+	// macOS), so build every candidate from the resolved root as production
+	// callers do.
+	rootReal, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inside, err := WithinRootAbs(root, filepath.Join(rootReal, "sub", "x.md"))
 	if err != nil || !inside {
 		t.Fatalf("inside = %v, %v", inside, err)
 	}
-	outside, err := WithinRootAbs(root, filepath.Join(root, "..", "elsewhere"))
+	outside, err := WithinRootAbs(root, filepath.Join(rootReal, "..", "elsewhere"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,7 +326,7 @@ func TestWithinRootAbs(t *testing.T) {
 		t.Fatal("parent path must be outside")
 	}
 	if CaseInsensitiveFS() {
-		insideFold, err := WithinRootAbs(root, strings.ToUpper(filepath.Join(root, "sub")))
+		insideFold, err := WithinRootAbs(root, strings.ToUpper(filepath.Join(rootReal, "sub")))
 		if err != nil || !insideFold {
 			t.Fatalf("case-folded containment failed: %v, %v", insideFold, err)
 		}
