@@ -1,0 +1,90 @@
+{
+  "schema": "skillguard-report/v1",
+  "tool": {
+    "name": "skillguard",
+    "version": "test"
+  },
+  "summary": {
+    "files_scanned": 3,
+    "files_skipped": 2,
+    "suppressed": 1,
+    "total_findings": 5,
+    "critical": 1,
+    "high": 1,
+    "medium": 1,
+    "low": 1,
+    "info": 1
+  },
+  "findings": [
+    {
+      "rule": "ASG001",
+      "severity": "critical",
+      "path": "SKILL.md",
+      "line": 12,
+      "column": 9,
+      "message": "Possible GitHub token detected (masked: ghp_******** (40 chars)).",
+      "remediation": "Remove the credential and rotate it.",
+      "fingerprint": "aaaaaaaaaaaaaaa1",
+      "context": "code-fence",
+      "platform": "claude"
+    },
+    {
+      "rule": "ASG008",
+      "severity": "medium",
+      "path": "SKILL.md",
+      "line": 20,
+      "column": 5,
+      "message": "Referenced local resource \"steps/gone.md\" does not exist in the package.",
+      "remediation": "Create the referenced file, fix the path, or delete the stale reference.",
+      "fingerprint": "aaaaaaaaaaaaaaa2",
+      "context": "prose",
+      "platform": "claude"
+    },
+    {
+      "rule": "ASG010",
+      "severity": "high",
+      "path": "notes/AGENTS.md",
+      "line": 3,
+      "column": 1,
+      "message": "Prompt-injection signal (override prior instructions).",
+      "remediation": "Rewrite instructions to work with the host platform's rules.",
+      "fingerprint": "aaaaaaaaaaaaaaa3",
+      "context": "prose",
+      "platform": "codex"
+    },
+    {
+      "rule": "ASG002",
+      "severity": "low",
+      "path": "notes/AGENTS.md",
+      "line": 9,
+      "column": 2,
+      "message": "UNC network path reference may leak internal infrastructure naming.",
+      "remediation": "Use portable relative paths.",
+      "fingerprint": "aaaaaaaaaaaaaaa4",
+      "context": "inline-code",
+      "platform": "codex"
+    },
+    {
+      "rule": "ASG900",
+      "severity": "info",
+      "path": ".skillguard.yml",
+      "line": 1,
+      "column": 1,
+      "message": "Suppression of ASG003 for docs/examples.md expired on 2026-01-01.",
+      "remediation": "Remove or renew the suppression.",
+      "fingerprint": "aaaaaaaaaaaaaaa5",
+      "context": "config",
+      "platform": "generic"
+    }
+  ],
+  "skipped": [
+    {
+      "path": ".env",
+      "reason": "env-file-never-read"
+    },
+    {
+      "path": "assets/bundle.zip",
+      "reason": "archive-never-read"
+    }
+  ]
+}

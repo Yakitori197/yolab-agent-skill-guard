@@ -1,0 +1,176 @@
+# CI for yolab-agent-skill-guard.
+#
+# Every third-party action is pinned to a full commit SHA (version noted in a
+# comment). No job needs repository secrets, nothing publishes or deploys, and
+# no artifact containing scanned source content is ever uploaded.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Format and vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l cmd internal tools)"
+          if [ -n "$unformatted" ]; then
+            echo "gofmt needed on:"; echo "$unformatted"; exit 1
+          fi
+      - name: go vet
+        run: go vet ./...
+
+  test:
+    name: Tests, race, coverage (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: go mod verify
+        run: go mod verify
+      - name: Unit and integration tests
+        run: go test ./...
+      - name: Race detector
+        run: go test -race ./...
+      - name: Symlink and hard-link security tests must really run (no silent skips)
+        run: |
+          go test ./internal/discovery/ ./internal/actionpath/ ./internal/app/ -run 'Symlink|symlink|HardLink' -v > link-tests.log 2>&1 || {
+            cat link-tests.log; exit 1;
+          }
+          if grep -q -- '--- SKIP' link-tests.log; then
+            echo "Link security tests were skipped on Linux CI:"
+            grep -- '--- SKIP' link-tests.log
+            exit 1
+          fi
+          echo "link security tests passed: $(grep -c -- '--- PASS' link-tests.log)"
+      - name: Coverage gate (internal >= 90%)
+        run: |
+          go test -coverprofile=cover.out -coverpkg=./internal/... ./...
+          go run ./tools/covercheck -profile cover.out -min 90
+
+  test-windows:
+    name: Tests (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go test ./...
+
+  test-macos:
+    name: Tests (macOS)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go test ./...
+
+  build-matrix:
+    name: Cross-platform build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: go build -trimpath ./cmd/skillguard
+
+  vulncheck:
+    name: Dependency vulnerability check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: govulncheck (pinned)
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
+          govulncheck ./...
+
+  self-scan:
+    name: Self-scan (dogfood)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Scan this repository with itself
+        run: |
+          go build -o skillguard ./cmd/skillguard
+          ./skillguard scan . --fail-on high --no-color
+
+  action-test:
+    name: Action smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Local entrypoint contract test (symlink cases required on Linux)
+        run: SKILLGUARD_REQUIRE_SYMLINKS=1 SKILLGUARD_REQUIRE_HARDLINKS=1 sh scripts/test-action.sh
+      - name: Docker action on the safe fixture
+        id: safe
+        uses: ./
+        with:
+          path: examples/safe-skill
+          fail-on: high
+          format: sarif
+          output: safe-report.sarif
+      - name: Assert safe outputs
+        run: |
+          test "${{ steps.safe.outputs.findings }}" = "0"
+          test -s safe-report.sarif
+      - name: Docker action on the risky fixture (expected to fail)
+        id: risky
+        continue-on-error: true
+        uses: ./
+        with:
+          path: examples/risky-skill
+          fail-on: high
+          format: json
+          output: risky-report.json
+      - name: Assert risky outcome and outputs
+        run: |
+          test "${{ steps.risky.outcome }}" = "failure"
+          test "${{ steps.risky.outputs.critical }}" != "0"
+          test -s risky-report.json

@@ -1,0 +1,63 @@
+# GitHub Action wrapper for skillguard.
+#
+# Security posture:
+#   - Scans only the checked-out workspace; nothing is transmitted anywhere.
+#   - Requires no secrets and no extra permissions.
+#   - The container builds skillguard from this repository's own source.
+name: "YoLab Agent Skill Guard"
+description: "Offline security, privacy, and compatibility audit for AI agent skills and instruction files (SKILL.md, AGENTS.md, CLAUDE.md, .mdc rules)."
+author: "Yakitori197"
+
+branding:
+  icon: "shield"
+  color: "blue"
+
+inputs:
+  path:
+    description: "Path to scan, relative to the workspace."
+    required: false
+    default: "."
+  config:
+    description: "Path to a .skillguard.yml configuration file (empty = auto-discover at the scan root)."
+    required: false
+    default: ""
+  fail-on:
+    description: "Severity threshold that fails the job: critical, high, medium, low, info, or none."
+    required: false
+    default: "high"
+  format:
+    description: "Report format: text, json, sarif, or html."
+    required: false
+    default: "sarif"
+  output:
+    description: "File path (relative to the workspace) where the report is written. It may be a new file, but its immediate parent directory must already exist: the action never creates directories and never replaces an existing path."
+    required: false
+    default: "skillguard-report.sarif"
+
+outputs:
+  findings:
+    description: "Total number of findings."
+  critical:
+    description: "Number of critical findings."
+  high:
+    description: "Number of high findings."
+  medium:
+    description: "Number of medium findings."
+  low:
+    description: "Number of low findings."
+  info:
+    description: "Number of info findings."
+  suppressed:
+    description: "Number of findings silenced by configured suppressions."
+  report-path:
+    description: "Path of the written report file."
+
+runs:
+  using: "docker"
+  image: "Dockerfile.action"
+  args:
+    - ${{ inputs.path }}
+    - ${{ inputs.config }}
+    - ${{ inputs.fail-on }}
+    - ${{ inputs.format }}
+    - ${{ inputs.output }}

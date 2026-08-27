@@ -1,0 +1,26 @@
+# Build artifacts
+/skillguard
+/skillguard.exe
+/dist/
+/bin/
+
+# Test and coverage output
+cover.out
+coverage.out
+*.test
+/test-results/
+
+# Local scan reports (regenerate with `skillguard scan`)
+/skillguard-report.*
+/*.sarif
+/*.report.html
+
+# Local toolchain sandbox (portable Go used during development; never committed)
+/.tools/
+
+# Editor and OS noise
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+.DS_Store

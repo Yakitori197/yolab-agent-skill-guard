@@ -1,0 +1,14 @@
+# Normalize all text to LF, everywhere, so deterministic outputs and golden
+# tests behave identically on Windows, Linux, and macOS.
+* text=auto eol=lf
+
+# Golden files are byte-compared; never rewrite them.
+*.golden -text
+
+# Shell scripts must stay LF to run inside the action container.
+*.sh text eol=lf
+
+# Go tooling expects LF.
+*.go text eol=lf
+go.mod text eol=lf
+go.sum text eol=lf

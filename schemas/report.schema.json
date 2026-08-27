@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Yakitori197/yolab-agent-skill-guard/main/schemas/report.schema.json",
+  "title": "skillguard JSON report (skillguard-report/v1)",
+  "description": "Machine-readable scan report. Deterministic: identical inputs produce byte-identical documents. Contains no timestamps and no absolute local paths.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "tool", "summary", "findings", "skipped"],
+  "properties": {
+    "schema": { "const": "skillguard-report/v1" },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "const": "skillguard" },
+        "version": { "type": "string" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "files_scanned", "files_skipped", "suppressed", "total_findings",
+        "critical", "high", "medium", "low", "info"
+      ],
+      "properties": {
+        "files_scanned": { "type": "integer", "minimum": 0 },
+        "files_skipped": { "type": "integer", "minimum": 0 },
+        "suppressed": { "type": "integer", "minimum": 0 },
+        "total_findings": { "type": "integer", "minimum": 0 },
+        "critical": { "type": "integer", "minimum": 0 },
+        "high": { "type": "integer", "minimum": 0 },
+        "medium": { "type": "integer", "minimum": 0 },
+        "low": { "type": "integer", "minimum": 0 },
+        "info": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "findings": {
+      "description": "Sorted by path, then line, then column, then rule ID.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "rule", "severity", "path", "line", "column",
+          "message", "remediation", "fingerprint", "context", "platform"
+        ],
+        "properties": {
+          "rule": { "type": "string", "pattern": "^ASG[0-9]{3}$" },
+          "severity": { "enum": ["critical", "high", "medium", "low", "info"] },
+          "path": {
+            "description": "Root-relative path with forward slashes; never absolute.",
+            "type": "string",
+            "not": { "pattern": "(^/|^[A-Za-z]:|\\\\)" }
+          },
+          "line": { "type": "integer", "minimum": 1 },
+          "column": { "type": "integer", "minimum": 1 },
+          "message": {
+            "description": "Human-readable description. Suspected secrets are always masked.",
+            "type": "string"
+          },
+          "remediation": { "type": "string" },
+          "fingerprint": {
+            "description": "Stable identity (rule + path + matched content), independent of line/column.",
+            "type": "string",
+            "pattern": "^[0-9a-f]{16}$"
+          },
+          "context": { "enum": ["prose", "code-fence", "inline-code", "frontmatter", "config"] },
+          "platform": { "enum": ["claude", "codex", "cursor", "generic"] }
+        }
+      }
+    },
+    "skipped": {
+      "description": "Files noticed but deliberately never read, sorted by path.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "reason"],
+        "properties": {
+          "path": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  }
+}

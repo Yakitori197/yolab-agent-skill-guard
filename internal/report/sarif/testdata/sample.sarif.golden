@@ -1,0 +1,280 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "skillguard",
+          "informationUri": "https://github.com/Yakitori197/yolab-agent-skill-guard",
+          "version": "test",
+          "rules": [
+            {
+              "id": "ASG001",
+              "name": "HardcodedSecret",
+              "shortDescription": {
+                "text": "Hardcoded Secret"
+              },
+              "fullDescription": {
+                "text": "s1"
+              },
+              "help": {
+                "text": "r1 (Heuristic rule: findings are risk signals requiring human review.)"
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg001",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "secrets"
+                ],
+                "security-severity": "9.5"
+              }
+            },
+            {
+              "id": "ASG002",
+              "name": "PrivateAbsolutePath",
+              "shortDescription": {
+                "text": "Private Absolute Path"
+              },
+              "fullDescription": {
+                "text": "s2"
+              },
+              "help": {
+                "text": "r2 (Heuristic rule: findings are risk signals requiring human review.)"
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg002",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "privacy"
+                ],
+                "security-severity": "5.5"
+              }
+            },
+            {
+              "id": "ASG008",
+              "name": "MissingReference",
+              "shortDescription": {
+                "text": "Missing Reference"
+              },
+              "fullDescription": {
+                "text": "s8"
+              },
+              "help": {
+                "text": "r8"
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg008",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "structure"
+                ],
+                "security-severity": "5.5"
+              }
+            },
+            {
+              "id": "ASG010",
+              "name": "PromptInjectionSignal",
+              "shortDescription": {
+                "text": "Prompt Injection Signal"
+              },
+              "fullDescription": {
+                "text": "s10"
+              },
+              "help": {
+                "text": "r10 (Heuristic rule: findings are risk signals requiring human review.)"
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg010",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "injection"
+                ],
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "ASG900",
+              "name": "ExpiredSuppression",
+              "shortDescription": {
+                "text": "Expired Suppression"
+              },
+              "fullDescription": {
+                "text": "s900"
+              },
+              "help": {
+                "text": "r900"
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg900",
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "governance"
+                ],
+                "security-severity": "0.0"
+              }
+            }
+          ]
+        }
+      },
+      "columnKind": "unicodeCodePoints",
+      "results": [
+        {
+          "ruleId": "ASG001",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Possible GitHub token detected (masked: ghp_******** (40 chars))."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 12,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "aaaaaaaaaaaaaaa1"
+          },
+          "properties": {
+            "context": "code-fence",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG008",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "Referenced local resource \"steps/gone.md\" does not exist in the package."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 20,
+                  "startColumn": 5
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "aaaaaaaaaaaaaaa2"
+          },
+          "properties": {
+            "context": "prose",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG010",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "Prompt-injection signal (override prior instructions)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "notes/AGENTS.md"
+                },
+                "region": {
+                  "startLine": 3,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "aaaaaaaaaaaaaaa3"
+          },
+          "properties": {
+            "context": "prose",
+            "platform": "codex"
+          }
+        },
+        {
+          "ruleId": "ASG002",
+          "ruleIndex": 1,
+          "level": "note",
+          "message": {
+            "text": "UNC network path reference may leak internal infrastructure naming."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "notes/AGENTS.md"
+                },
+                "region": {
+                  "startLine": 9,
+                  "startColumn": 2
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "aaaaaaaaaaaaaaa4"
+          },
+          "properties": {
+            "context": "inline-code",
+            "platform": "codex"
+          }
+        },
+        {
+          "ruleId": "ASG900",
+          "ruleIndex": 4,
+          "level": "note",
+          "message": {
+            "text": "Suppression of ASG003 for docs/examples.md expired on 2026-01-01."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": ".skillguard.yml"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "aaaaaaaaaaaaaaa5"
+          },
+          "properties": {
+            "context": "config",
+            "platform": "generic"
+          }
+        }
+      ]
+    }
+  ]
+}

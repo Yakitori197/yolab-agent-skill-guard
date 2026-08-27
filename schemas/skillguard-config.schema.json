@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Yakitori197/yolab-agent-skill-guard/main/schemas/skillguard-config.schema.json",
+  "title": "skillguard configuration (.skillguard.yml)",
+  "description": "Schema version 1 of the skillguard configuration file. Unknown fields are rejected by the parser (fail closed).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version"],
+  "properties": {
+    "version": {
+      "description": "Configuration schema version. This build supports exactly 1.",
+      "const": 1
+    },
+    "fail_on": {
+      "description": "Findings at or above this severity make the exit code 1. 'none' disables the findings-based exit code.",
+      "enum": ["critical", "high", "medium", "low", "info", "none"],
+      "default": "high"
+    },
+    "platforms": {
+      "description": "Platforms to scan. Omit for all platforms; when present the list must not be empty.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["codex", "claude", "cursor", "generic"] }
+    },
+    "include": {
+      "description": "Glob patterns (relative, forward slashes, ** supported) selecting candidate files. Empty means every supported file.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/relativeGlob" }
+    },
+    "exclude": {
+      "description": "Glob patterns removing files from the scan. Applied after include.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/relativeGlob" }
+    },
+    "max_file_size": {
+      "description": "Largest file (bytes) the scanner will read. Bounded to keep memory use predictable.",
+      "type": "integer",
+      "minimum": 1024,
+      "maximum": 16777216,
+      "default": 1048576
+    },
+    "allowed_domains": {
+      "description": "Hosts scanned content may legitimately reference for network access (exact host, subdomains included, or *.wildcard).",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "allowed_capabilities": {
+      "description": "Capability names skills may declare in frontmatter (for example \"network\").",
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "disabled_rules": {
+      "description": "Rule IDs to disable. Disabling every detection rule is rejected.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/ruleID" }
+    },
+    "severity_overrides": {
+      "description": "Per-rule severity replacement.",
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^ASG[0-9]{3}$": { "enum": ["critical", "high", "medium", "low", "info"] }
+      }
+    },
+    "suppressions": {
+      "description": "Targeted, justified exceptions. Each needs a rule, a non-empty reason, and a path or fingerprint scope.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rule", "reason"],
+        "anyOf": [{ "required": ["path"] }, { "required": ["fingerprint"] }],
+        "properties": {
+          "rule": { "$ref": "#/definitions/ruleID" },
+          "path": {
+            "allOf": [{ "$ref": "#/definitions/relativeGlob" }],
+            "description": "Specific workspace-relative file the exception applies to. Wildcards are accepted only when a fingerprint is also present, and patterns that could cover the whole supported file set are rejected by the parser."
+          },
+          "fingerprint": {
+            "description": "Finding fingerprint (16 lowercase hex characters) from a JSON/SARIF report.",
+            "type": "string",
+            "pattern": "^[0-9a-f]{16}$"
+          },
+          "reason": {
+            "description": "Why this finding is acceptable. Must not be empty.",
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "expires": {
+            "description": "Last valid day (inclusive), YYYY-MM-DD. After it, the suppression stops applying and surfaces as an ASG900 finding.",
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "ruleID": {
+      "type": "string",
+      "pattern": "^ASG[0-9]{3}$"
+    },
+    "relativeGlob": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Relative glob with forward slashes; \"..\", backslashes, and absolute paths are rejected.",
+      "not": { "pattern": "(^/|^[A-Za-z]:|\\\\|(^|/)\\.\\.(/|$))" }
+    }
+  }
+}

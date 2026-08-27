@@ -1,0 +1,864 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "skillguard",
+          "informationUri": "https://github.com/Yakitori197/yolab-agent-skill-guard",
+          "version": "dev",
+          "rules": [
+            {
+              "id": "ASG001",
+              "name": "HardcodedSecret",
+              "shortDescription": {
+                "text": "Hardcoded Secret"
+              },
+              "fullDescription": {
+                "text": "High-confidence credential material embedded in scanned text."
+              },
+              "help": {
+                "text": "Remove the credential and rotate it if it was ever real. Load secrets from the environment or a secret manager at runtime, and reference them as placeholders such as ${SERVICE_API_KEY}. (Heuristic rule: findings are risk signals requiring human review.)"
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg001",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "secrets"
+                ],
+                "security-severity": "9.5"
+              }
+            },
+            {
+              "id": "ASG002",
+              "name": "PrivateAbsolutePath",
+              "shortDescription": {
+                "text": "Private Absolute Path"
+              },
+              "fullDescription": {
+                "text": "Absolute paths that may leak usernames or private directory layout."
+              },
+              "help": {
+                "text": "Replace absolute personal paths with package-relative paths, or use placeholders such as ~, %USERPROFILE%, or ${HOME} when a home directory is genuinely meant. (Heuristic rule: findings are risk signals requiring human review.)"
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg002",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "privacy"
+                ],
+                "security-severity": "5.5"
+              }
+            },
+            {
+              "id": "ASG003",
+              "name": "DestructiveCommand",
+              "shortDescription": {
+                "text": "Destructive Command"
+              },
+              "fullDescription": {
+                "text": "Commands that can irreversibly destroy files, history, or data."
+              },
+              "help": {
+                "text": "Prefer reversible operations (trash instead of rm -rf, git revert instead of reset --hard, soft deletes instead of DROP). If a destructive step is genuinely required, gate it behind explicit user confirmation and narrow its scope to named paths. (Heuristic rule: findings are risk signals requiring human review.)"
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg003",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "dangerous-commands"
+                ],
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "ASG004",
+              "name": "RemotePipeExecution",
+              "shortDescription": {
+                "text": "Remote Pipe Execution"
+              },
+              "fullDescription": {
+                "text": "Content downloaded from the network and executed without review."
+              },
+              "help": {
+                "text": "Download to a file, review it, pin it by checksum or immutable reference, and only then execute the reviewed copy. (Heuristic rule: findings are risk signals requiring human review.)"
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg004",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "supply-chain"
+                ],
+                "security-severity": "9.5"
+              }
+            },
+            {
+              "id": "ASG005",
+              "name": "UndeclaredNetworkAccess",
+              "shortDescription": {
+                "text": "Undeclared Network Access"
+              },
+              "fullDescription": {
+                "text": "Content instructs network access to hosts the configuration does not allow."
+              },
+              "help": {
+                "text": "List every legitimately required host under allowed_domains in .skillguard.yml, or remove the network step. Declare a \"network\" capability in frontmatter only when configuration permits it. (Heuristic rule: findings are risk signals requiring human review.)"
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg005",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "network"
+                ],
+                "security-severity": "5.5"
+              }
+            },
+            {
+              "id": "ASG006",
+              "name": "ExcessiveToolPermission",
+              "shortDescription": {
+                "text": "Excessive Tool Permission"
+              },
+              "fullDescription": {
+                "text": "Skill declares or demands broader tool access than its task needs."
+              },
+              "help": {
+                "text": "Scope each tool grant to the narrowest pattern that still works (for example a single command family instead of an unscoped shell), and declare only capabilities the configuration allows. (Heuristic rule: findings are risk signals requiring human review.)"
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg006",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "permissions"
+                ],
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "ASG007",
+              "name": "PathEscape",
+              "shortDescription": {
+                "text": "Path Escape"
+              },
+              "fullDescription": {
+                "text": "References that resolve outside the allowed package root."
+              },
+              "help": {
+                "text": "Keep every referenced resource inside the package directory and reference it with a plain relative path. Copy shared assets into the package instead of reaching outside it."
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg007",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "structure"
+                ],
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "ASG008",
+              "name": "MissingReference",
+              "shortDescription": {
+                "text": "Missing Reference"
+              },
+              "fullDescription": {
+                "text": "Declared local resources that do not exist."
+              },
+              "help": {
+                "text": "Create the referenced file, fix the path, or delete the stale reference."
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg008",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "structure"
+                ],
+                "security-severity": "5.5"
+              }
+            },
+            {
+              "id": "ASG009",
+              "name": "InvalidManifest",
+              "shortDescription": {
+                "text": "Invalid Manifest"
+              },
+              "fullDescription": {
+                "text": "Frontmatter that is missing, malformed, or of the wrong shape."
+              },
+              "help": {
+                "text": "Give every SKILL.md a YAML frontmatter mapping with string name and description fields; keep field types as documented and remove duplicate keys."
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg009",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "structure"
+                ],
+                "security-severity": "5.5"
+              }
+            },
+            {
+              "id": "ASG010",
+              "name": "PromptInjectionSignal",
+              "shortDescription": {
+                "text": "Prompt Injection Signal"
+              },
+              "fullDescription": {
+                "text": "Phrases that try to override an agent's instructions or hide actions from the user."
+              },
+              "help": {
+                "text": "Rewrite instructions to work with the host platform's rules instead of against them. Legitimate skills never need the agent to hide actions from the user or to abandon prior instructions. (Heuristic rule: findings are risk signals requiring human review.)"
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg010",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "injection"
+                ],
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "ASG011",
+              "name": "UnpinnedRemoteDependency",
+              "shortDescription": {
+                "text": "Unpinned Remote Dependency"
+              },
+              "fullDescription": {
+                "text": "Remote scripts, actions, or refs addressed by mutable tag or branch."
+              },
+              "help": {
+                "text": "Pin GitHub Actions and raw-content URLs to full 40-character commit SHAs, and pin installed tools to exact versions. Record why each pinned version was chosen. (Heuristic rule: findings are risk signals requiring human review.)"
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg011",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "supply-chain"
+                ],
+                "security-severity": "5.5"
+              }
+            },
+            {
+              "id": "ASG012",
+              "name": "ObfuscatedPayload",
+              "shortDescription": {
+                "text": "Obfuscated Payload"
+              },
+              "fullDescription": {
+                "text": "Large encoded blobs, especially near decode-and-execute instructions."
+              },
+              "help": {
+                "text": "Ship logic as reviewable plain text inside the package. If binary data is unavoidable, distribute it as a separate checksummed artifact — never as an inline blob the agent must decode and run. (Heuristic rule: findings are risk signals requiring human review.)"
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg012",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "obfuscation"
+                ],
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "ASG900",
+              "name": "ExpiredSuppression",
+              "shortDescription": {
+                "text": "Expired Suppression"
+              },
+              "fullDescription": {
+                "text": "A configured suppression has lapsed and no longer silences its finding."
+              },
+              "help": {
+                "text": "Remove the expired suppression if the finding is resolved, or set a new expiry with an updated reason after review."
+              },
+              "helpUri": "https://github.com/Yakitori197/yolab-agent-skill-guard/blob/main/docs/rules.md#asg900",
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "governance"
+                ],
+                "security-severity": "0.0"
+              }
+            }
+          ]
+        }
+      },
+      "columnKind": "unicodeCodePoints",
+      "results": [
+        {
+          "ruleId": "ASG009",
+          "ruleIndex": 8,
+          "level": "error",
+          "message": {
+            "text": "SKILL.md frontmatter is missing the required \"description\" field."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 1,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "e96eadaea3316e6b"
+          },
+          "properties": {
+            "context": "frontmatter",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG009",
+          "ruleIndex": 8,
+          "level": "note",
+          "message": {
+            "text": "Skill name \"Data Sync Helper\" does not match the conventional lowercase-hyphen form (a-z, 0-9, hyphens)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 2,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "01fa37bd68806573"
+          },
+          "properties": {
+            "context": "frontmatter",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG006",
+          "ruleIndex": 5,
+          "level": "error",
+          "message": {
+            "text": "allowed-tools grants a bare wildcard (*): every tool becomes available, which defeats least privilege."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 4,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "68c82b83e5a7e413"
+          },
+          "properties": {
+            "context": "frontmatter",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG005",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "Frontmatter lists the \"network\" capability, but the configuration does not include it in allowed_capabilities."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 6,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "cf9db6c6bbc3c637"
+          },
+          "properties": {
+            "context": "frontmatter",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG007",
+          "ruleIndex": 6,
+          "level": "error",
+          "message": {
+            "text": "Reference \"../shared/helpers.md\" resolves outside the scan root."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 18,
+                  "startColumn": 37
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "b3f2ca130790c36b"
+          },
+          "properties": {
+            "context": "prose",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG001",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "Possible connection string with embedded password detected (masked: Fak3******** (19 chars)). Treat this as a risk signal and rotate the credential if it is real."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 23,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "d2be82f242176ffe"
+          },
+          "properties": {
+            "context": "code-fence",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG004",
+          "ruleIndex": 3,
+          "level": "error",
+          "message": {
+            "text": "Remote pipe-to-execute pattern (download piped to shell) detected. Whatever the remote host serves would run unreviewed; this is a supply-chain risk signal."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 29,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "621be48a44363747"
+          },
+          "properties": {
+            "context": "code-fence",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG005",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "Content references network access to host \"get.fixture-installer.dev\", which is not covered by allowed_domains. Declare the host or remove the network step."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 29,
+                  "startColumn": 11
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "1dfee42609d1a1fb"
+          },
+          "properties": {
+            "context": "code-fence",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG011",
+          "ruleIndex": 10,
+          "level": "warning",
+          "message": {
+            "text": "Tool installation at @latest resolves to different code over time; pin an exact version."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 30,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "38de68304d8ae166"
+          },
+          "properties": {
+            "context": "code-fence",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG003",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "Destructive command pattern (recursive force delete (Remove-Item)) detected. This is a risk signal: verify the step is intentional, guarded, and consented — the scanner does not execute or judge intent."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 36,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "45f1d9f33325a517"
+          },
+          "properties": {
+            "context": "code-fence",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG003",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "Destructive command pattern (git reset --hard) detected. This is a risk signal: verify the step is intentional, guarded, and consented — the scanner does not execute or judge intent."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 37,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "5660520fa1388616"
+          },
+          "properties": {
+            "context": "code-fence",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG003",
+          "ruleIndex": 2,
+          "level": "error",
+          "message": {
+            "text": "Destructive command pattern (SQL TRUNCATE TABLE) detected. This is a risk signal: verify the step is intentional, guarded, and consented — the scanner does not execute or judge intent."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 41,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "8b0ea17928b29c25"
+          },
+          "properties": {
+            "context": "code-fence",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG005",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "Content references network access to host \"collector.fixture-sink.net\", which is not covered by allowed_domains. Declare the host or remove the network step."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 46,
+                  "startColumn": 47
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "71526ec6814fdd91"
+          },
+          "properties": {
+            "context": "prose",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG010",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "Prompt-injection signal (override prior instructions): \"Ignore all previous instructions\". This is a heuristic risk signal that requires human review."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 48,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "db3c387bee5c962e"
+          },
+          "properties": {
+            "context": "prose",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG010",
+          "ruleIndex": 9,
+          "level": "error",
+          "message": {
+            "text": "Prompt-injection signal (conceal from the user): \"Do not tell the user\". This is a heuristic risk signal that requires human review."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 49,
+                  "startColumn": 1
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "0f880d9f7425ca18"
+          },
+          "properties": {
+            "context": "prose",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG012",
+          "ruleIndex": 11,
+          "level": "error",
+          "message": {
+            "text": "Base64-looking blob (136 chars) sits next to decode-and-execute instructions. The scanner did not decode it; review the payload before any use."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 54,
+                  "startColumn": 7
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "a56b3a6de3971392"
+          },
+          "properties": {
+            "context": "code-fence",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG002",
+          "ruleIndex": 1,
+          "level": "warning",
+          "message": {
+            "text": "Windows user-profile path \"C:\\Users\\\u003credacted-user\u003e\" may leak a real username and will not resolve on other machines."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 59,
+                  "startColumn": 39
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "977f32cc4c4d2e93"
+          },
+          "properties": {
+            "context": "prose",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG008",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "Referenced local resource \"pipeline.md\" does not exist in the package."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 60,
+                  "startColumn": 46
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "884461ea821b7192"
+          },
+          "properties": {
+            "context": "prose",
+            "platform": "claude"
+          }
+        },
+        {
+          "ruleId": "ASG011",
+          "ruleIndex": 10,
+          "level": "warning",
+          "message": {
+            "text": "GitHub Action \"fixture-org/sync-action\" is pinned to mutable ref \"v2\"; pin to a full commit SHA (with the version in a comment)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "SKILL.md"
+                },
+                "region": {
+                  "startLine": 68,
+                  "startColumn": 9
+                }
+              }
+            }
+          ],
+          "partialFingerprints": {
+            "skillguard/v1": "748c29fbc8d8043c"
+          },
+          "properties": {
+            "context": "code-fence",
+            "platform": "claude"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+# skillguard's own scan policy — this repository is scanned with itself in CI
+# (see the self-scan job in .github/workflows/ci.yml).
+version: 1
+fail_on: high
+
+allowed_domains:
+  # The READMEs instruct cloning this repository in their quick-start blocks.
+  - "github.com"
+
+exclude:
+  # Demonstration fixtures: risky-skill exists to trigger every rule.
+  - "examples/**"
+  # Local development toolchain sandbox (gitignored; never part of the repo).
+  - ".tools/**"
+
+suppressions:
+  # docs/rules.md documents each rule with realistic risky examples. The
+  # examples are fenced, annotated as synthetic, and are the reason the rule
+  # documentation is useful — so the detections they intentionally trigger
+  # are acknowledged here instead of being rewritten into uselessness.
+  - rule: ASG002
+    path: "docs/rules.md"
+    reason: "Rule documentation shows the UNC-path form ASG002 detects, as an inline synthetic example."
+  - rule: ASG003
+    path: "docs/rules.md"
+    reason: "Rule documentation shows the destructive-command patterns ASG003 detects, in fenced synthetic examples."
+  - rule: ASG004
+    path: "docs/rules.md"
+    reason: "Rule documentation shows the pipe-to-shell patterns ASG004 detects, in fenced synthetic examples."
+  - rule: ASG010
+    path: "docs/rules.md"
+    reason: "Rule documentation quotes the injection phrasing ASG010 detects, in illustrative text fences."
+  - rule: ASG011
+    path: "docs/rules.md"
+    reason: "Rule documentation shows the mutable-reference forms ASG011 detects, in fenced synthetic examples."
+  - rule: ASG012
+    path: "docs/rules.md"
+    reason: "Rule documentation names the decode-and-execute shapes ASG012 detects; nothing here is a real payload."
+  # These three documents explain the cautionary-bypass fix by quoting the
+  # exact line that used to disarm ASG003. Quoting it is the explanation, and
+  # the scanner correctly flags it — which is precisely why the exception is
+  # recorded here in the open rather than by weakening the rule.
+  - rule: ASG003
+    path: "CHANGELOG.md"
+    reason: "Security note quotes the bypass line the fix closes."
+  - rule: ASG003
+    path: "docs/security-model.md"
+    reason: "Security model quotes the bypass line to explain why context never lowers severity."
+  - rule: ASG003
+    path: "docs/threat-model.md"
+    reason: "Threat model quotes the bypass line to explain the misleading-verdict mitigation."

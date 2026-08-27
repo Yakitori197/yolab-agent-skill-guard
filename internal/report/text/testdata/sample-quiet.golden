@@ -1,0 +1,14 @@
+
+SKILL.md
+  12:9  critical  ASG001  Possible GitHub token detected (masked: ghp_******** (40 chars)).
+  20:5  medium  ASG008  Referenced local resource "steps/gone.md" does not exist in the package.
+
+notes/AGENTS.md
+  3:1  high  ASG010  Prompt-injection signal (override prior instructions).
+  9:2  low  ASG002  UNC network path reference may leak internal infrastructure naming.
+
+.skillguard.yml
+  1:1  info  ASG900  Suppression of ASG003 for docs/examples.md expired on 2026-01-01.
+
+summary: critical 1 · high 1 · medium 1 · low 1 · info 1
+result: FAIL — 2 finding(s) at or above fail-on threshold (high)
