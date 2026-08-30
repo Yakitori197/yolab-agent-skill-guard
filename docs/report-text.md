@@ -29,6 +29,18 @@ path, and echoes a relative path exactly as you typed it, so terminal output
 and CI logs never publish a local directory layout. `--show-paths` opts back
 into the full path for local debugging.
 
+## Hostile text
+
+Paths and quoted fragments can contain anything a filesystem or a scanned
+document allows. Before anything is written, every string that did not
+originate in the renderer is escaped: control characters become `\n`, `\r`,
+`\t` or `\xNN`; Unicode format characters (bidirectional overrides, zero-width
+characters, the byte-order mark), the line and paragraph separators, and
+malformed UTF-8 become `\uNNNN` or `\xNN`. Printable text of any script is
+untouched, so a Traditional Chinese path or message reads exactly as it is on
+disk. A filename containing a newline therefore cannot add a line that looks
+like a finding, and cannot disturb the summary or result lines.
+
 ## Color
 
 ANSI color is used only when **all** of these hold: format is `text`, output

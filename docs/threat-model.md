@@ -32,19 +32,34 @@ platforms themselves.
   is capped at 64 KiB; all regexes run on Go's RE2 engine, which has linear
   time guarantees and no catastrophic backtracking. Fuzz tests
   (`internal/parser`) assert crash-freedom.
-- **Report injection.** Findings quote fragments of hostile text. The HTML
+- **Report injection.** Findings quote fragments of hostile text, and paths
+  come from filenames that may contain any byte but NUL and `/`. The HTML
   renderer escapes everything contextually (`html/template`) under a
   `default-src 'none'` CSP with zero JavaScript; JSON/SARIF strings are
   encoder-escaped. Adversarial fixtures assert `<script>` payloads and
-  structure-breaking quotes are neutralized in every format.
+  structure-breaking quotes are neutralized in each of those formats.
+- **Terminal injection.** The text report and the CLI's own diagnostics are
+  what a terminal interprets. Every string that did not originate in this
+  repository passes through `internal/termsafe` first: C0/C1 controls (ESC, CR, LF, BEL, DEL),
+  Unicode format characters (bidi overrides and isolates, zero-width
+  characters, the byte-order mark), the line and paragraph separators, and
+  malformed UTF-8 all become visible escapes, while printable text of any
+  script is untouched. The renderer's own ANSI is added afterwards, so with
+  `--no-color` the output contains no ESC at all, and in color mode the only
+  escape sequences present are the renderer's. Adversarial fixtures assert a
+  filename cannot forge a finding, summary, or result line.
 
 ### 2. Scanned text lures the scanner outside the root
 
 - **Upward traversal** (`..`, mixed separators, percent-encoding) is resolved
   lexically first — escapes are *reported*, never followed.
 - **Symlinks** are resolved with `EvalSymlinks` and containment-checked
-  (case-folded on Windows/macOS) before any read; directory symlinks are
-  never descended; cycles surface as unreadable, not hangs.
+  before any read; the check compares filesystem identity (`os.SameFile`
+  against the root, walking the target's ancestors) rather than lowercased
+  strings, so a case-only sibling directory is not mistaken for the root on a
+  case-sensitive volume, and fails closed when identity is unavailable.
+  Directory symlinks are never descended; cycles surface as unreadable, not
+  hangs.
 - **Absolute references** (drive letters, UNC, `~`, `file:`) are flagged and
   never resolved.
 

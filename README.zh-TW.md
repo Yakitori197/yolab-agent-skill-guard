@@ -55,8 +55,9 @@ package 可能：
 | 絕不執行被掃描內容 | 純文字分析，無 shell、無 eval、無渲染 |
 | runtime 絕不使用網路 | 掃描器內不存在網路程式碼路徑 |
 | 絕不讀取敏感檔案 | `.env*`、金鑰、資料庫、壓縮檔**依檔名跳過、從未開啟**，僅回報「存在且已跳過」 |
-| symlink 絕不逃出掃描根目錄 | 先解析目標並檢查包含關係，才允許讀取 |
+| symlink 絕不逃出掃描根目錄 | 先解析目標，再以檔案系統識別（`os.SameFile`）檢查包含關係後才允許讀取；絕不以字串小寫比對判定 |
 | 絕不輸出機密原文 | 疑似憑證在所有格式一律遮蔽 |
+| 絕不操控你的終端機 | 檔名、訊息，以及 CLI 自己的診斷訊息（含 `flag` 套件回顯的未知旗標名）在輸出前一律轉義；`--no-color` 輸出完全不含 ESC |
 | 絕不宣稱惡意 | Heuristic findings 一律標示為需人工覆核的風險信號 |
 
 詳見 [docs/security-model.md](docs/security-model.md)、
@@ -95,7 +96,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # 首次 release 後，請改釘到完整 commit SHA：
       - uses: Yakitori197/yolab-agent-skill-guard@<pinned-commit-sha>
         with:

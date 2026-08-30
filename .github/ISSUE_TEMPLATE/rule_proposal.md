@@ -22,7 +22,9 @@ assignees: ""
 
 ## Known false-positive risks
 
-<!-- What benign text could match, and how does the rule avoid or downgrade it? -->
+<!-- What benign text could match, and how does the pattern avoid matching it?
+     Note: a rule may not lower its own severity based on the scanned text —
+     severity comes from the rule alone. Narrow the pattern instead. -->
 
 ## Proposed metadata
 

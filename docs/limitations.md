@@ -11,9 +11,9 @@ behind marketing language; several have planned mitigations in the
   reviewer, and severity is a prior, not a verdict.
 - **Line-oriented matching.** Commands assembled across multiple lines
   (backslash continuations, string concatenation), or phrased in language the
-  patterns do not anticipate, can evade detection. Conversely, discussing a
-  dangerous command in prose without cautionary phrasing yields a
-  (downgraded) finding.
+  patterns do not anticipate, can evade detection. Conversely, merely
+  discussing a dangerous command in prose yields a finding at the rule's full
+  severity: nothing in the scanned text lowers it.
 - **No semantic understanding.** The scanner does not interpret code blocks,
   does not resolve variables, and deliberately never decodes encoded content
   — a base64 blob is flagged by shape, not by what it contains.

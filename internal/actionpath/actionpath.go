@@ -49,6 +49,14 @@ func Resolve(workspace, value string, kind Kind) (Result, error) {
 	if strings.TrimSpace(workspace) == "" {
 		return Result{}, errors.New("workspace directory is not set")
 	}
+	// The workspace is a path too, and on Unix it may legally contain a
+	// newline. Every resolved value is built from it and ends up in a
+	// line-based key=value protocol, so it is checked here rather than only
+	// for the relative inputs. The message names the code point, never the
+	// path: error text is human-facing and must not carry it unescaped.
+	if r, bad := firstControlRune(workspace); bad {
+		return Result{}, fmt.Errorf("workspace directory path contains a control character (U+%04X); it cannot be carried through the action's key=value protocol", r)
+	}
 	if err := checkSyntax(value, kind); err != nil {
 		return Result{}, err
 	}
@@ -91,10 +99,8 @@ func checkSyntax(value string, kind Kind) error {
 	if value == "" {
 		return fmt.Errorf("%s input must not be empty", string(kind))
 	}
-	for _, r := range value {
-		if r < 0x20 || r == 0x7f || (r >= 0x80 && r <= 0x9f) {
-			return fmt.Errorf("%s input contains a control character (0x%02x); newlines, carriage returns, and NUL bytes are not allowed", string(kind), r)
-		}
+	if r, bad := firstControlRune(value); bad {
+		return fmt.Errorf("%s input contains a control character (0x%02x); newlines, carriage returns, and NUL bytes are not allowed", string(kind), r)
 	}
 	if strings.HasPrefix(value, "-") {
 		return fmt.Errorf("%s input must not start with a dash, which would be parsed as a command-line flag", string(kind))
@@ -108,6 +114,19 @@ func checkSyntax(value string, kind Kind) error {
 		}
 	}
 	return nil
+}
+
+// firstControlRune returns the first C0, DEL or C1 control in s. These are the
+// characters that break a line-based protocol or drive a terminal, and they are
+// refused everywhere in this package rather than escaped: a path is a name, and
+// silently changing it would point the caller at a different file.
+func firstControlRune(s string) (rune, bool) {
+	for _, r := range s {
+		if r < 0x20 || r == 0x7f || (r >= 0x80 && r <= 0x9f) {
+			return r, true
+		}
+	}
+	return 0, false
 }
 
 // isSeparator treats both slash flavors as separators so a Windows-style
@@ -227,6 +246,13 @@ func relSlash(wsReal, p string) (string, error) {
 
 // SameTarget reports whether two validated results point at the same file, so a
 // caller can refuse to write a report over its own input.
+//
+// Sameness is identical canonical paths, or filesystem identity when both
+// paths exist — never a case-folded string comparison, which would call two
+// distinct files on a case-sensitive volume the same file. A destination
+// spelled with different case on a case-insensitive volume is already refused
+// one step earlier: the file exists there, and the output kind never accepts
+// an existing path.
 func SameTarget(a, b Result) bool {
 	if a.Abs == "" || b.Abs == "" {
 		return false
@@ -234,8 +260,13 @@ func SameTarget(a, b Result) bool {
 	if a.Abs == b.Abs {
 		return true
 	}
-	if discovery.CaseInsensitiveFS() {
-		return strings.EqualFold(a.Abs, b.Abs)
+	ai, err := os.Stat(a.Abs)
+	if err != nil {
+		return false
 	}
-	return false
+	bi, err := os.Stat(b.Abs)
+	if err != nil {
+		return false
+	}
+	return os.SameFile(ai, bi)
 }

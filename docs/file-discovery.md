@@ -80,8 +80,14 @@ Never entered, at any depth, reported once with reason
 ## Symlinks
 
 - A symlinked **file** is followed only when its resolved target stays inside
-  the scan root (case-folded comparison on Windows/macOS). Escaping links are
-  reported as `symlink-outside-root` and never read.
+  the scan root. Containment is decided by filesystem identity, not by
+  comparing lowercased strings: an exact canonical prefix settles the common
+  case, and anything else is answered by walking the target's ancestors and
+  asking `os.SameFile` whether one of them *is* the root directory. A
+  directory whose name differs from the root's only by case is therefore
+  accepted only where the filesystem really resolves both spellings to the
+  same directory. Escaping links are reported as `symlink-outside-root` and
+  never read.
 - A symlinked **directory** is never descended (`symlink-dir-not-followed`),
   which also makes symlink cycles impossible to walk into; broken links and
   cycles surface as `unreadable`.

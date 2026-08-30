@@ -36,10 +36,11 @@ These exclusions are hard-coded and cannot be disabled by configuration —
 - The contents (or any metadata beyond name and skip reason) of skipped
   files.
 - An unmasked suspected credential, in any format.
-- The absolute path of the scan root, in any format. Machine-readable formats
-  never carried it; the text header shows `<scan-root>` for an absolute input
-  and echoes a relative input exactly as you typed it. `--show-paths` is the
-  explicit opt-in that prints the real root, in text output only.
+- The absolute path of the scan root, unless you ask for it. The
+  machine-readable formats (JSON, SARIF, HTML) never carry it under any flag.
+  The text header shows `<scan-root>` for an absolute input and echoes a
+  relative input exactly as you typed it; `--show-paths` is the one explicit
+  opt-in that prints the real root, and it affects text output only.
 - A local absolute path inside an error message: an absolute input is reduced
   to its last element (`.../no-such.yml`) before being quoted back.
 - Timestamps, hostnames, usernames of the operator, environment variables,

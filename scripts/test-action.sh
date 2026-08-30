@@ -84,6 +84,107 @@ run_case "output absolute"         2 "safe-skill" "" "high" "sarif" "/tmp/escape
 run_case "output CR/LF injection"  2 "safe-skill" "" "high" "sarif" "$CRLF_VALUE"
 run_case "output is a directory"   2 "safe-skill" "" "high" "sarif" "reports"
 
+echo "--- machine protocol: the report lands on exactly the requested path ---"
+# U+202E RIGHT-TO-LEFT OVERRIDE is a legal filename character. The action-paths
+# key=value output is a machine protocol, so the entrypoint must carry it
+# through unmodified and the report must be written to the file the caller
+# asked for -- not to an escaped lookalike.
+BIDI="$(awk 'BEGIN{printf "%c%c%c", 226, 128, 174}')"
+BIDI_REL="reports/report${BIDI}gnp.json"
+run_case "bidi output path"          0 "safe-skill" "" "high" "json" "$BIDI_REL"
+if [ -s "$WS/$BIDI_REL" ]; then
+  echo "ok: the report was written to the exact requested path"
+else
+  echo "FAIL: the report did not land on the requested path"
+  ls -b "$WS/reports" || true
+  fail=1
+fi
+# The escaped lookalike must not exist.
+if [ -e "$WS/reports/report\u202egnp.json" ]; then
+  echo "FAIL: an escaped lookalike path was created"
+  fail=1
+fi
+# GITHUB_OUTPUT must carry the value verbatim.
+GITHUB_OUTPUT="$WS/gh-output.txt"
+: > "$GITHUB_OUTPUT"
+export GITHUB_OUTPUT
+set +e
+sh scripts/action-entrypoint.sh "safe-skill" "" "high" "json" "reports/verbatim${BIDI}.json" >/dev/null 2>&1
+set -e
+if grep -q "report-path=reports/verbatim${BIDI}.json" "$GITHUB_OUTPUT"; then
+  echo "ok: GITHUB_OUTPUT carries the machine value byte for byte"
+else
+  echo "FAIL: GITHUB_OUTPUT rewrote the report path"
+  cat -v "$GITHUB_OUTPUT"
+  fail=1
+fi
+
+echo "--- backslash paths: the shell must not reinterpret a legal filename ---"
+# A backslash is a legal character in a POSIX filename, and skillguard accepts
+# it. The XSI echo that Alpine (BusyBox ash) and Debian (dash) provide as
+# /bin/sh interprets backslash escapes in its argument, so emitting the report
+# path with echo would turn a\tb.json into a real tab, split a\nb.json
+# across two lines (forging a GITHUB_OUTPUT entry), and truncate a\cb.json
+# at the "a". The entrypoint uses printf with a literal format string instead.
+#
+# Windows has no such filenames -- a backslash is a path separator there -- so
+# the physical cases only run where the filesystem can express them.
+BS_PROBE="$WS/reports/probe${BS}name"
+backslash_ok=0
+# Not ":" -- that is a special builtin, and under "set -e" a failed redirection
+# on one aborts the whole script instead of just failing the probe.
+set +e
+( printf 'probe' > "$BS_PROBE" ) 2>/dev/null
+probe_rc=$?
+set -e
+if [ "$probe_rc" -eq 0 ] && [ -f "$BS_PROBE" ]; then
+  backslash_ok=1
+fi
+if [ "$backslash_ok" -eq 1 ]; then
+  for suffix in t n c r; do
+    rel="reports/a${BS}${suffix}b.json"
+    GITHUB_OUTPUT="$WS/gh-output.txt"
+    : > "$GITHUB_OUTPUT"
+    export GITHUB_OUTPUT
+    set +e
+    sh scripts/action-entrypoint.sh "safe-skill" "" "high" "json" "$rel" >/dev/null 2>&1
+    rc=$?
+    set -e
+    if [ "$rc" -ne 0 ]; then
+      echo "FAIL: backslash output ${suffix} exited $rc, want 0"
+      fail=1
+      continue
+    fi
+    if [ -s "$WS/$rel" ]; then
+      echo "ok: report landed on the exact backslash path (${suffix})"
+    else
+      echo "FAIL: the report did not land on the requested backslash path (${suffix})"
+      fail=1
+    fi
+    # The protocol line must be the caller's value, byte for byte...
+    if grep -qxF "report-path=$rel" "$GITHUB_OUTPUT"; then
+      echo "ok: GITHUB_OUTPUT carries the backslash path verbatim (${suffix})"
+    else
+      echo "FAIL: GITHUB_OUTPUT rewrote the backslash path (${suffix})"
+      cat -v "$GITHUB_OUTPUT"
+      fail=1
+    fi
+    # ...and it must not have forged an extra line.
+    lines="$(grep -c '' "$GITHUB_OUTPUT")"
+    if [ "$lines" -ne 9 ]; then
+      echo "FAIL: GITHUB_OUTPUT has $lines lines, want 9 (${suffix})"
+      cat -v "$GITHUB_OUTPUT"
+      fail=1
+    fi
+  done
+else
+  if [ -n "${SKILLGUARD_REQUIRE_BACKSLASH_PATHS:-}" ]; then
+    echo "FAIL: backslash path cases were skipped but SKILLGUARD_REQUIRE_BACKSLASH_PATHS is set"
+    fail=1
+  fi
+  echo "SKIPPED: this filesystem treats a backslash as a separator; Linux CI runs these cases."
+fi
+
 echo "--- output parent directory must already exist ---"
 # The action never creates directories: a missing immediate parent is refused
 # by the helper, so the O_EXCL write is never reached and nothing is created.

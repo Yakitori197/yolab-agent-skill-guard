@@ -388,3 +388,40 @@ func TestSameTarget(t *testing.T) {
 		t.Fatal("empty results must never match")
 	}
 }
+
+// SameTarget must recognise one file reached by two names. A hard link is the
+// case a string comparison cannot see and a case-folded comparison would get
+// wrong in both directions.
+func TestSameTargetUsesFilesystemIdentity(t *testing.T) {
+	ws := workspace(t)
+	original := filepath.Join(ws, "pkg", "SKILL.md")
+	linked := filepath.Join(ws, "linked-skill.md")
+	if err := os.Link(original, linked); err != nil {
+		t.Skipf("cannot create hard links in this environment: %v", err)
+	}
+	a, err := Resolve(ws, "pkg/SKILL.md", KindScan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := Resolve(ws, "linked-skill.md", KindScan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.Abs == b.Abs {
+		t.Fatal("the two names must resolve to different paths for this test to mean anything")
+	}
+	if !SameTarget(a, b) {
+		t.Fatal("two hard links to one file are the same target")
+	}
+	other, err := Resolve(ws, ".skillguard.yml", KindConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if SameTarget(a, other) {
+		t.Fatal("different files must not be the same target")
+	}
+	// A path that does not exist cannot be proven identical to anything.
+	if SameTarget(a, Result{Abs: filepath.Join(ws, "absent.md"), Rel: "absent.md"}) {
+		t.Fatal("a non-existent path must never compare equal by identity")
+	}
+}

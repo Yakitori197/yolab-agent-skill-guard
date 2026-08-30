@@ -1,6 +1,13 @@
 // Package text renders the terminal report. Output is deterministic, uses
 // only LF line endings, and colors are applied solely when explicitly enabled
 // by the caller (never when writing to a non-TTY).
+//
+// This is the one renderer whose output a terminal interprets, so every string
+// that did not originate in this package — the root label, paths taken from
+// the filesystem, rule messages that quote scanned text — passes through
+// termsafe.Sanitize before it is written. The ANSI codes below are added
+// afterwards, so the only escape sequences that can reach the terminal are the
+// ones this file emits.
 package text
 
 import (
@@ -8,6 +15,7 @@ import (
 	"io"
 
 	"github.com/Yakitori197/yolab-agent-skill-guard/internal/model"
+	"github.com/Yakitori197/yolab-agent-skill-guard/internal/termsafe"
 )
 
 // Options controls text rendering.
@@ -44,6 +52,9 @@ func sevColor(s model.Severity) string {
 // Render writes the report. It never returns partial ANSI state: every
 // colored token is individually reset.
 func Render(w io.Writer, rep *model.Report, o Options) {
+	// safe neutralizes text that came from outside this package; paint adds
+	// this renderer's own ANSI afterwards, never before.
+	safe := termsafe.Sanitize
 	paint := func(code, s string) string {
 		if !o.Color {
 			return s
@@ -53,8 +64,8 @@ func Render(w io.Writer, rep *model.Report, o Options) {
 
 	if !o.Quiet {
 		fmt.Fprintf(w, "%s %s — offline audit for agent skills and instruction files\n\n",
-			paint(ansiBold, rep.Tool.Name), rep.Tool.Version)
-		fmt.Fprintf(w, "root: %s\n", rep.RootLabel)
+			paint(ansiBold, safe(rep.Tool.Name)), safe(rep.Tool.Version))
+		fmt.Fprintf(w, "root: %s\n", safe(rep.RootLabel))
 		fmt.Fprintf(w, "files scanned: %d · skipped: %d · suppressed: %d\n",
 			rep.FilesScanned, len(rep.Skipped), rep.Suppressed)
 	}
@@ -62,13 +73,14 @@ func Render(w io.Writer, rep *model.Report, o Options) {
 	lastPath := ""
 	for _, f := range rep.Findings {
 		if f.Path != lastPath {
-			fmt.Fprintf(w, "\n%s\n", paint(ansiBold, f.Path))
+			fmt.Fprintf(w, "\n%s\n", paint(ansiBold, safe(f.Path)))
 			lastPath = f.Path
 		}
 		fmt.Fprintf(w, "  %d:%d  %s  %s  %s\n",
-			f.Line, f.Column, paint(sevColor(f.Severity), string(f.Severity)), f.RuleID, f.Message)
+			f.Line, f.Column, paint(sevColor(f.Severity), safe(string(f.Severity))),
+			safe(f.RuleID), safe(f.Message))
 		if !o.Quiet && f.Remediation != "" {
-			fmt.Fprintf(w, "        fix: %s\n", f.Remediation)
+			fmt.Fprintf(w, "        fix: %s\n", safe(f.Remediation))
 		}
 	}
 	if len(rep.Findings) == 0 && !o.Quiet {
@@ -78,7 +90,7 @@ func Render(w io.Writer, rep *model.Report, o Options) {
 	if !o.Quiet && len(rep.Skipped) > 0 {
 		fmt.Fprintf(w, "\nskipped (never read):\n")
 		for _, s := range rep.Skipped {
-			fmt.Fprintf(w, "  - %s — %s\n", s.Path, s.Reason)
+			fmt.Fprintf(w, "  - %s — %s\n", safe(s.Path), safe(s.Reason))
 		}
 	}
 
@@ -91,10 +103,10 @@ func Render(w io.Writer, rep *model.Report, o Options) {
 		n := rep.CountAtOrAbove(th)
 		if n > 0 {
 			fmt.Fprintf(w, "result: %s — %d finding(s) at or above fail-on threshold (%s)\n",
-				paint(ansiBold+ansiRed, "FAIL"), n, th)
+				paint(ansiBold+ansiRed, "FAIL"), n, safe(string(th)))
 		} else {
 			fmt.Fprintf(w, "result: %s — no findings at or above fail-on threshold (%s)\n",
-				paint(ansiBold, "PASS"), th)
+				paint(ansiBold, "PASS"), safe(string(th)))
 		}
 	} else {
 		fmt.Fprintf(w, "result: %s — fail-on is none (informational run)\n", paint(ansiBold, "PASS"))

@@ -80,8 +80,18 @@ func ResolveWithin(baseDir, target string) (resolved string, escaped bool) {
 }
 
 // WithinDir reports whether rel (root-relative, slash form) lies inside dir
-// (also root-relative; "" means the root itself). Comparison optionally folds
-// case, which matches Windows and macOS filesystem semantics.
+// (also root-relative; "" means the root itself).
+//
+// foldCase must come from an observation of the filesystem actually holding
+// the paths (discovery.FoldsCase), never from runtime.GOOS: macOS carries both
+// case-insensitive and case-sensitive volumes, and Windows supports
+// per-directory case sensitivity.
+//
+// This is a *reporting* comparison — it decides whether a reference is judged
+// to have left its skill package — and folding is the more permissive of the
+// two answers, so an unknown filesystem must pass foldCase=false. It never
+// authorizes a read: filesystem access is gated by discovery.WithinRootAbs,
+// which compares filesystem identity and does not fold case at all.
 func WithinDir(dir, rel string, foldCase bool) bool {
 	if dir == "" || dir == "." {
 		return true
