@@ -22,8 +22,8 @@ jobs:
     name: Format and vet
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
           cache: true
@@ -40,8 +40,8 @@ jobs:
     name: Tests, race, coverage (Linux)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
           cache: true
@@ -51,17 +51,24 @@ jobs:
         run: go test ./...
       - name: Race detector
         run: go test -race ./...
-      - name: Symlink and hard-link security tests must really run (no silent skips)
+      - name: Filesystem security tests must really run (no silent skips)
+        # These cases are skipped where the platform cannot express them
+        # (Windows without the symlink privilege, a case-folding filesystem).
+        # Linux can express all of them, so a skip here is a real gap. The
+        # HardLink half of the pattern covers both the no-clobber hard-link
+        # cases and TestFoldsCaseRealHardLinkedCaseVariantsAreNotFolding, which
+        # needs a filesystem able to hold Skill.md and sKILL.MD at once.
         run: |
-          go test ./internal/discovery/ ./internal/actionpath/ ./internal/app/ -run 'Symlink|symlink|HardLink' -v > link-tests.log 2>&1 || {
-            cat link-tests.log; exit 1;
+          pattern='Symlink|symlink|HardLink|CaseOnly|HostileFilenameOnDisk'
+          go test ./internal/discovery/ ./internal/actionpath/ ./internal/app/ -run "$pattern" -v > fs-tests.log 2>&1 || {
+            cat fs-tests.log; exit 1;
           }
-          if grep -q -- '--- SKIP' link-tests.log; then
-            echo "Link security tests were skipped on Linux CI:"
-            grep -- '--- SKIP' link-tests.log
+          if grep -q -- '--- SKIP' fs-tests.log; then
+            echo "Filesystem security tests were skipped on Linux CI:"
+            grep -- '--- SKIP' fs-tests.log
             exit 1
           fi
-          echo "link security tests passed: $(grep -c -- '--- PASS' link-tests.log)"
+          echo "filesystem security tests passed: $(grep -c -- '--- PASS' fs-tests.log)"
       - name: Coverage gate (internal >= 90%)
         run: |
           go test -coverprofile=cover.out -coverpkg=./internal/... ./...
@@ -71,8 +78,8 @@ jobs:
     name: Tests (Windows)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
           cache: true
@@ -82,8 +89,8 @@ jobs:
     name: Tests (macOS)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
           cache: true
@@ -97,8 +104,8 @@ jobs:
         goos: [linux, windows, darwin]
         goarch: [amd64, arm64]
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
           cache: true
@@ -113,8 +120,8 @@ jobs:
     name: Dependency vulnerability check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
           cache: true
@@ -127,8 +134,8 @@ jobs:
     name: Self-scan (dogfood)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
           cache: true
@@ -141,13 +148,17 @@ jobs:
     name: Action smoke test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
           cache: true
-      - name: Local entrypoint contract test (symlink cases required on Linux)
-        run: SKILLGUARD_REQUIRE_SYMLINKS=1 SKILLGUARD_REQUIRE_HARDLINKS=1 sh scripts/test-action.sh
+      - name: Local entrypoint contract test (link and backslash cases required on Linux)
+        env:
+          SKILLGUARD_REQUIRE_SYMLINKS: "1"
+          SKILLGUARD_REQUIRE_HARDLINKS: "1"
+          SKILLGUARD_REQUIRE_BACKSLASH_PATHS: "1"
+        run: sh scripts/test-action.sh
       - name: Docker action on the safe fixture
         id: safe
         uses: ./

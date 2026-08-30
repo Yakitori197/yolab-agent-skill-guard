@@ -28,7 +28,16 @@ type Context struct {
 	// ResolveReal resolves symlinks for a root-relative path. It reports
 	// whether the final target stays inside the root and whether it exists.
 	ResolveReal func(rel string) (inside bool, exists bool)
-	// FoldCase enables case-insensitive path containment (Windows/macOS).
+	// FoldCase selects how reference paths are compared for *reporting*:
+	// whether a reference is judged to have left its skill package, and how
+	// missing references are de-duplicated. It must come from an observation
+	// of the directory actually holding the paths (discovery.FoldsCase), never
+	// from runtime.GOOS — macOS ships both case-insensitive and case-sensitive
+	// APFS, and Windows resolves names per directory. Folding is the more
+	// permissive answer, so an unknown filesystem must pass false.
+	//
+	// It authorizes nothing. Filesystem access is gated by ResolveReal, which
+	// is backed by discovery.WithinRootAbs and does not fold case at all.
 	FoldCase bool
 }
 

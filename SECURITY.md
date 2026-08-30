@@ -14,10 +14,14 @@ skillguard's security promises are:
    archives) — they are reported as skipped by name only.
 3. It never follows symlinks (or resolves references) outside the scan root.
 4. It never transmits anything over the network at runtime.
-5. It never emits an unmasked suspected secret or an absolute private path in
-   any report format.
-6. Scanned content cannot inject markup or script into the HTML report, or
-   break the JSON/SARIF structure.
+5. It never emits an unmasked suspected secret in any report format.
+6. It never emits a local absolute path by default. The machine-readable
+   formats (JSON, SARIF) never carry one at all. The text report shows the
+   scan root only when the user explicitly passes `--show-paths`, which exists
+   for local debugging; without it an absolute input is reduced to
+   `<scan-root>` and other paths to their base name.
+7. Scanned content cannot inject markup or script into the HTML report, break
+   the JSON/SARIF structure, or drive the terminal through the text report.
 
 Anything that violates one of these promises is a security vulnerability —
 please report it. Crashes on crafted input (parser panics) also qualify.

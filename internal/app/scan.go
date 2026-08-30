@@ -2,9 +2,9 @@ package app
 
 import (
 	"bytes"
-	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/Yakitori197/yolab-agent-skill-guard/internal/model"
@@ -22,8 +22,7 @@ func (a *App) cmdScan(args []string, mode ScanMode) int {
 	if mode == ModeValidate {
 		name = "validate"
 	}
-	fs := flag.NewFlagSet(name, flag.ContinueOnError)
-	fs.SetOutput(a.Stderr)
+	fs := a.newFlagSet(name)
 	var (
 		format     = fs.String("format", "text", "output format: text, json, sarif, or html")
 		output     = fs.String("output", "", "write the report to this file instead of stdout")
@@ -43,18 +42,18 @@ func (a *App) cmdScan(args []string, mode ScanMode) int {
 		return ExitError
 	}
 	if !validFormats[*format] {
-		fmt.Fprintf(a.Stderr, "skillguard %s: unknown format %q (expected text, json, sarif, or html)\n", name, *format)
+		a.errf("skillguard %s: unknown format %q (expected text, json, sarif, or html)\n", name, *format)
 		return ExitError
 	}
 
 	rootAbs, _, err := resolveRoot(rootArg)
 	if err != nil {
-		fmt.Fprintf(a.Stderr, "skillguard: %v\n", err)
+		a.errf("skillguard: %v\n", err)
 		return ExitError
 	}
 	cfg, err := loadConfig(*configPath, rootAbs)
 	if err != nil {
-		fmt.Fprintf(a.Stderr, "skillguard: %v\n", err)
+		a.errf("skillguard: %v\n", err)
 		return ExitError
 	}
 	if len(platforms) > 0 {
@@ -62,7 +61,7 @@ func (a *App) cmdScan(args []string, mode ScanMode) int {
 		for _, p := range platforms {
 			pp, perr := model.ParsePlatform(p)
 			if perr != nil {
-				fmt.Fprintf(a.Stderr, "skillguard %s: --platform: %v\n", name, perr)
+				a.errf("skillguard %s: --platform: %v\n", name, perr)
 				return ExitError
 			}
 			cfg.Platforms = append(cfg.Platforms, pp)
@@ -72,7 +71,7 @@ func (a *App) cmdScan(args []string, mode ScanMode) int {
 	if *failOnFlag != "" {
 		fo, ferr := model.ParseFailOn(*failOnFlag)
 		if ferr != nil {
-			fmt.Fprintf(a.Stderr, "skillguard %s: --fail-on: %v\n", name, ferr)
+			a.errf("skillguard %s: --fail-on: %v\n", name, ferr)
 			return ExitError
 		}
 		effFailOn = fo
@@ -80,7 +79,7 @@ func (a *App) cmdScan(args []string, mode ScanMode) int {
 
 	rep, err := runScan(ScanOptions{RootArg: rootArg, Config: cfg, Mode: mode, Now: a.Now(), ShowPaths: *showPaths})
 	if err != nil {
-		fmt.Fprintf(a.Stderr, "skillguard: %v\n", err)
+		a.errf("skillguard: %v\n", err)
 		return ExitError
 	}
 
@@ -99,21 +98,23 @@ func (a *App) cmdScan(args []string, mode ScanMode) int {
 		err = htmlreport.Render(&buf, rep, rules.Catalog(), effFailOn)
 	}
 	if err != nil {
-		fmt.Fprintf(a.Stderr, "skillguard: rendering %s report failed: %v\n", *format, err)
+		a.errf("skillguard: rendering %s report failed: %v\n", *format, err)
 		return ExitError
 	}
 
 	if *output != "" {
 		if werr := writeReport(*output, buf.Bytes(), *noClobber); werr != nil {
 			if os.IsExist(werr) {
-				fmt.Fprintf(a.Stderr, "skillguard: refusing to overwrite the existing file %q (--no-clobber)\n", displayPath(*output))
+				a.errf("skillguard: refusing to overwrite the existing file %q (--no-clobber)\n", displayPath(*output))
 			} else {
-				fmt.Fprintf(a.Stderr, "skillguard: cannot write report to %q\n", displayPath(*output))
+				a.errf("skillguard: cannot write report to %q\n", displayPath(*output))
 			}
 			return ExitError
 		}
 		if !*quiet {
-			fmt.Fprintf(a.Stderr, "skillguard: %s report written to %s\n", *format, displayPath(*output))
+			// %q, not %s: the destination is user-supplied and may contain
+			// ESC or a newline, which a terminal would act on.
+			a.errf("skillguard: %s report written to %q\n", *format, displayPath(*output))
 		}
 	} else {
 		if _, werr := a.Stdout.Write(buf.Bytes()); werr != nil {
@@ -122,7 +123,7 @@ func (a *App) cmdScan(args []string, mode ScanMode) int {
 	}
 	if *summary != "" {
 		if serr := writeSummary(*summary, rep); serr != nil {
-			fmt.Fprintf(a.Stderr, "skillguard: cannot write summary to %q\n", displayPath(*summary))
+			a.errf("skillguard: cannot write summary to %q\n", displayPath(*summary))
 			return ExitError
 		}
 	}
@@ -135,8 +136,8 @@ func (a *App) cmdScan(args []string, mode ScanMode) int {
 
 // parseWithPath parses flags that may appear before and/or after the single
 // optional path argument (`skillguard scan pkg --format json` works).
-func (a *App) parseWithPath(fs *flag.FlagSet, args []string, name string) (string, bool) {
-	if err := fs.Parse(args); err != nil {
+func (a *App) parseWithPath(fs *flagSet, args []string, name string) (string, bool) {
+	if err := fs.parse(args); err != nil {
 		return "", false
 	}
 	rootArg := "."
@@ -144,16 +145,30 @@ func (a *App) parseWithPath(fs *flag.FlagSet, args []string, name string) (strin
 	if len(rest) >= 1 {
 		rootArg = rest[0]
 		if len(rest) > 1 {
-			if err := fs.Parse(rest[1:]); err != nil {
+			if err := fs.parse(rest[1:]); err != nil {
 				return "", false
 			}
 			if len(fs.Args()) > 0 {
-				fmt.Fprintf(a.Stderr, "skillguard %s: unexpected extra arguments: %s\n", name, strings.Join(fs.Args(), " "))
+				// The leftovers are raw argv; quoting each one keeps a
+				// crafted argument from writing escape sequences here.
+				a.errf("skillguard %s: unexpected extra arguments: %s\n",
+					name, quoteArgs(fs.Args()))
 				return "", false
 			}
 		}
 	}
 	return rootArg, true
+}
+
+// quoteArgs renders argv values for a human-readable error line. strconv.Quote
+// turns ESC, CR, LF, bidi overrides and malformed UTF-8 into visible escapes,
+// so a crafted argument cannot drive the terminal from an error message.
+func quoteArgs(args []string) string {
+	quoted := make([]string, len(args))
+	for i, a := range args {
+		quoted[i] = strconv.Quote(a)
+	}
+	return strings.Join(quoted, " ")
 }
 
 // writeSummary emits deterministic key=value counters consumable by CI shells

@@ -31,13 +31,15 @@ internal/report/*   one Report → text | json | sarif | html
 | `cmd/skillguard` | `main()` shim only | contain logic |
 | `internal/app` | command dispatch, engine orchestration, exit codes | render formats itself |
 | `internal/config` | parse + validate `.skillguard.yml`, glob compilation, suppression matching | read files other than what app hands it |
-| `internal/discovery` | walking, default exclusions, sensitive-file gate, symlink containment, and the single bounded content read (`ReadCandidate`) | read anything a name-based rule already refused |
+| `internal/discovery` | walking, default exclusions, sensitive-file gate, symlink containment decided by filesystem identity (`containment.go`), and the single bounded content read (`ReadCandidate`) | read anything a name-based rule already refused, or infer filesystem case semantics from `runtime.GOOS` |
 | `internal/parser` | line model, fence/blockquote/inline-code annotation, frontmatter (yaml.v3 behind a recover guard), reference extraction | touch the filesystem |
 | `internal/platform` | classify path → platform + package root | read files |
 | `internal/rules` | the catalog; every rule consumes a `Document` and an injected `Context` | perform I/O directly (existence checks are injected functions) |
 | `internal/actionpath` | validate and resolve CI-wrapper path inputs (containment, symlinks, control characters) | be bypassed by the entrypoint shell |
 | `internal/redact` | masking of secrets and username path segments | — |
-| `internal/pathsafe` | pure-string path normalization, traversal and containment checks | touch the filesystem |
+| `internal/pathsafe` | pure-string path normalization, traversal and package-containment checks | touch the filesystem, or be used to authorize a read |
+| `internal/termsafe` | neutralize control, format and bidi characters and malformed UTF-8 before human-readable text reaches a terminal (`Sanitize` for values, `SanitizeBlock` for layout this tool composed) | be applied to JSON, SARIF or HTML, which escape at their own layer |
+| `internal/app/safeout.go` | the one place package app writes human-readable text: sanitized `errf`/`outf`, and a `flag.FlagSet` wrapper whose parser output is re-rendered safely | be bypassed by a new command writing to `a.Stderr` directly |
 | `internal/report/{text,json,sarif,html}` | render a finished `model.Report` | re-run scanning, sort, or mutate findings |
 | `internal/model` | shared types, severity ordering, deterministic sort, fingerprints | depend on any other internal package |
 | `internal/version` | ldflags-injected build metadata | fabricate values |

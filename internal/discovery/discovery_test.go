@@ -325,11 +325,25 @@ func TestWithinRootAbs(t *testing.T) {
 	if outside {
 		t.Fatal("parent path must be outside")
 	}
-	if CaseInsensitiveFS() {
-		insideFold, err := WithinRootAbs(root, strings.ToUpper(filepath.Join(rootReal, "sub")))
-		if err != nil || !insideFold {
-			t.Fatalf("case-folded containment failed: %v, %v", insideFold, err)
-		}
+	// A differently-cased spelling of the same subdirectory is accepted if and
+	// only if the filesystem actually resolves it to that directory. The
+	// verdict is compared against os.SameFile rather than against runtime.GOOS,
+	// so the assertion holds on case-sensitive and case-insensitive volumes
+	// alike, and on the case-sensitive APFS and per-directory-case-sensitive
+	// Windows configurations a GOOS guess gets wrong.
+	upper := strings.ToUpper(filepath.Join(rootReal, "sub"))
+	got, err := WithinRootAbs(root, upper)
+	if err != nil {
+		got = false
+	}
+	subInfo, serr := os.Stat(sub)
+	if serr != nil {
+		t.Fatal(serr)
+	}
+	upperInfo, uerr := os.Stat(upper)
+	wantSameDir := uerr == nil && os.SameFile(subInfo, upperInfo)
+	if got != wantSameDir {
+		t.Fatalf("upper-case spelling: WithinRootAbs = %v, but it is the same directory = %v", got, wantSameDir)
 	}
 }
 

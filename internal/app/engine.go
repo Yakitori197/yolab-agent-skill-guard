@@ -151,8 +151,15 @@ func runScan(opts ScanOptions) (*model.Report, error) {
 	}
 
 	ctx := &rules.Context{
-		Config:   cfg,
-		FoldCase: discovery.CaseInsensitiveFS(),
+		Config: cfg,
+		// Observed by listing the scan root and asking whether it resolves one
+		// of its own entries under a differently-cased spelling — never
+		// assumed from the operating system. It describes the root directory
+		// itself; Windows lets a nested directory differ, which this single
+		// answer does not model. It selects how reference paths are compared
+		// for reporting and authorizes no filesystem access (see
+		// discovery.FoldsCase and discovery.WithinRootAbs).
+		FoldCase: discovery.FoldsCase(rootAbs),
 		FileExists: func(rel string) bool {
 			if pathsafe.HasDotDot(rel) {
 				return false

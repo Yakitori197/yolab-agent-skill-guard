@@ -211,8 +211,11 @@ Reports references that resolve outside the allowed boundary:
 | Reference leaving its skill package directory (but inside the root) | medium |
 | Absolute reference (drive letters, rooted paths, UNC, `~`, `file:`) | medium |
 
-Containment uses cleaned, decoded, slash-normalized paths, case-folded on
-case-insensitive filesystems. Escaping targets are **never read**.
+Containment uses cleaned, decoded, slash-normalized paths; the filesystem
+check behind it compares filesystem identity rather than lowercased strings.
+Whether the *package-containment* comparison folds case is observed from the
+filesystem holding the scan root, and an inconclusive answer means no folding
+(the stricter choice). Escaping targets are **never read**.
 
 **Remediation.** Keep every referenced resource inside the package and
 reference it relatively; copy shared assets in rather than reaching out.

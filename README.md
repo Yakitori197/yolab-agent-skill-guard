@@ -70,8 +70,9 @@ read-only instrument:
 | Never executes scanned content | No shell-out, no eval, no rendering — text analysis only |
 | Never uses the network at runtime | No network code paths exist in the scanner |
 | Never reads sensitive files | `.env*`, `*.pem/key/p12/pfx`, databases, archives are skipped **by name, unopened**, and reported as skipped |
-| Never follows symlinks out of the root | Symlink targets are resolved and containment-checked before any read |
+| Never follows symlinks out of the root | Symlink targets are resolved and containment-checked by filesystem identity (`os.SameFile`), never by comparing lowercased paths |
 | Never prints a secret | Suspected credentials are masked in every format; raw values never leave the matcher |
+| Never drives your terminal | Filenames, messages, and the CLI's own diagnostics — including an unknown flag name echoed back by the `flag` package — are escaped before anything is written; `--no-color` output contains no ESC at all |
 | Never claims malice | Heuristic findings are labeled risk signals requiring human review |
 
 Details: [docs/security-model.md](docs/security-model.md) ·
@@ -129,7 +130,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       # Pin to a full commit SHA once the first release of this action exists:
       - uses: Yakitori197/yolab-agent-skill-guard@<pinned-commit-sha>
         with:

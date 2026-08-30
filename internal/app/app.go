@@ -63,14 +63,14 @@ func (a *App) Run(args []string) int {
 		a.usage(a.Stdout)
 		return ExitOK
 	default:
-		fmt.Fprintf(a.Stderr, "skillguard: unknown command %q\n\n", args[0])
+		a.errf("skillguard: unknown command %q\n\n", args[0])
 		a.usage(a.Stderr)
 		return ExitError
 	}
 }
 
 func (a *App) usage(w io.Writer) {
-	fmt.Fprint(w, strings.TrimLeft(`
+	fmt.Fprint(blockWriter{w}, strings.TrimLeft(`
 skillguard — offline security, privacy, and compatibility auditor for
 AI agent skills and instruction files.
 

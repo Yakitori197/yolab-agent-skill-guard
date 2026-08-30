@@ -11,7 +11,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 
@@ -56,10 +55,6 @@ const (
 	ReasonSymlinkDir    = "symlink-dir-not-followed"
 	ReasonUnreadable    = "unreadable"
 )
-
-// CaseInsensitiveFS reports whether path comparisons should fold case on the
-// current platform.
-func CaseInsensitiveFS() bool { return runtime.GOOS == "windows" || runtime.GOOS == "darwin" }
 
 // Walk discovers candidates under rootAbs, applying default exclusions,
 // configuration include/exclude patterns, size limits, and content sniffing.
@@ -339,31 +334,9 @@ func hasAnySuffix(s string, suffixes ...string) bool {
 	return false
 }
 
-// WithinRootAbs reports whether candidate (an absolute, symlink-resolved
-// path) stays inside rootAbs. On case-insensitive filesystems the comparison
-// folds case so that C:\ROOT and c:\root are the same boundary.
-func WithinRootAbs(rootAbs, candidate string) (bool, error) {
-	rootReal, err := filepath.EvalSymlinks(rootAbs)
-	if err != nil {
-		return false, err
-	}
-	if relInside(rootReal, candidate) {
-		return true, nil
-	}
-	if CaseInsensitiveFS() && relInside(strings.ToLower(rootReal), strings.ToLower(candidate)) {
-		return true, nil
-	}
-	return false, nil
-}
-
-func relInside(root, candidate string) bool {
-	rel, err := filepath.Rel(root, candidate)
-	if err != nil {
-		return false
-	}
-	rel = filepath.ToSlash(rel)
-	return rel != ".." && !strings.HasPrefix(rel, "../")
-}
+// WithinRootAbs lives in containment.go: it is the single escape check every
+// read and every wrapper-supplied path depends on, and it decides containment
+// from filesystem identity rather than from string case.
 
 func relSlash(rootAbs, p string) string {
 	rel, err := filepath.Rel(rootAbs, p)

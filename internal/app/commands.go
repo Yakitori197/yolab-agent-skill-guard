@@ -1,7 +1,6 @@
 package app
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,16 +14,17 @@ import (
 )
 
 func (a *App) cmdRules(args []string) int {
-	fs := flag.NewFlagSet("rules", flag.ContinueOnError)
-	fs.SetOutput(a.Stderr)
-	if err := fs.Parse(args); err != nil {
+	fs := a.newFlagSet("rules")
+	if err := fs.parse(args); err != nil {
 		return ExitError
 	}
 	if len(fs.Args()) > 0 {
-		fmt.Fprintln(a.Stderr, "skillguard rules: this command takes no arguments")
+		a.errln("skillguard rules: this command takes no arguments")
 		return ExitError
 	}
-	w := tabwriter.NewWriter(a.Stdout, 2, 4, 2, ' ', 0)
+	// The catalog is this tool's own text, but it goes out through the
+	// same sanitizing writer as everything else a human reads.
+	w := tabwriter.NewWriter(blockWriter{a.Stdout}, 2, 4, 2, ' ', 0)
 	fmt.Fprintln(w, "ID\tSEVERITY\tCATEGORY\tHEURISTIC\tTITLE — SUMMARY")
 	for _, m := range rules.Catalog() {
 		h := "no"
@@ -38,33 +38,32 @@ func (a *App) cmdRules(args []string) int {
 }
 
 func (a *App) cmdExplain(args []string) int {
-	fs := flag.NewFlagSet("explain", flag.ContinueOnError)
-	fs.SetOutput(a.Stderr)
-	if err := fs.Parse(args); err != nil {
+	fs := a.newFlagSet("explain")
+	if err := fs.parse(args); err != nil {
 		return ExitError
 	}
 	rest := fs.Args()
 	if len(rest) != 1 {
-		fmt.Fprintln(a.Stderr, "skillguard explain: exactly one RULE_ID argument is required (see `skillguard rules`)")
+		a.errln("skillguard explain: exactly one RULE_ID argument is required (see `skillguard rules`)")
 		return ExitError
 	}
 	id := strings.ToUpper(strings.TrimSpace(rest[0]))
 	m, ok := rules.MetaByID(id)
 	if !ok {
-		fmt.Fprintf(a.Stderr, "skillguard explain: unknown rule %q (see `skillguard rules` for the catalog)\n", rest[0])
+		a.errf("skillguard explain: unknown rule %q (see `skillguard rules` for the catalog)\n", rest[0])
 		return ExitError
 	}
 	h := "no"
 	if m.Heuristic {
 		h = "yes — findings are risk signals requiring human review"
 	}
-	fmt.Fprintf(a.Stdout, "%s — %s\n", m.ID, m.Title)
-	fmt.Fprintf(a.Stdout, "severity: %s · category: %s · heuristic: %s\n", m.DefaultSeverity, m.Category, h)
-	fmt.Fprintf(a.Stdout, "\nWHY IT MATTERS\n  %s\n", m.Rationale)
-	fmt.Fprintf(a.Stdout, "\nREMEDIATION\n  %s\n", m.Remediation)
-	fmt.Fprintf(a.Stdout, "\nSAFE EXAMPLE\n  %s\n", m.SafeExample)
-	fmt.Fprintf(a.Stdout, "\nRISKY EXAMPLE (synthetic)\n  %s\n", m.UnsafeExample)
-	fmt.Fprintf(a.Stdout, "\nSUPPORTED CONTEXTS\n  %s\n", strings.Join(m.Contexts, ", "))
+	a.outf("%s — %s\n", m.ID, m.Title)
+	a.outf("severity: %s · category: %s · heuristic: %s\n", m.DefaultSeverity, m.Category, h)
+	a.outf("\nWHY IT MATTERS\n  %s\n", m.Rationale)
+	a.outf("\nREMEDIATION\n  %s\n", m.Remediation)
+	a.outf("\nSAFE EXAMPLE\n  %s\n", m.SafeExample)
+	a.outf("\nRISKY EXAMPLE (synthetic)\n  %s\n", m.UnsafeExample)
+	a.outf("\nSUPPORTED CONTEXTS\n  %s\n", strings.Join(m.Contexts, ", "))
 	return ExitOK
 }
 
@@ -118,20 +117,19 @@ fail_on: high
 `
 
 func (a *App) cmdInit(args []string) int {
-	fs := flag.NewFlagSet("init", flag.ContinueOnError)
-	fs.SetOutput(a.Stderr)
-	if err := fs.Parse(args); err != nil {
+	fs := a.newFlagSet("init")
+	if err := fs.parse(args); err != nil {
 		return ExitError
 	}
 	if len(fs.Args()) > 0 {
-		fmt.Fprintln(a.Stderr, "skillguard init: this command takes no arguments")
+		a.errln("skillguard init: this command takes no arguments")
 		return ExitError
 	}
 	dir := a.Workdir
 	if dir == "" {
 		wd, err := os.Getwd()
 		if err != nil {
-			fmt.Fprintln(a.Stderr, "skillguard init: cannot determine the working directory")
+			a.errln("skillguard init: cannot determine the working directory")
 			return ExitError
 		}
 		dir = wd
@@ -140,28 +138,27 @@ func (a *App) cmdInit(args []string) int {
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
 	if err != nil {
 		if os.IsExist(err) {
-			fmt.Fprintln(a.Stderr, "skillguard init: .skillguard.yml already exists; refusing to overwrite")
+			a.errln("skillguard init: .skillguard.yml already exists; refusing to overwrite")
 		} else {
-			fmt.Fprintln(a.Stderr, "skillguard init: cannot create .skillguard.yml")
+			a.errln("skillguard init: cannot create .skillguard.yml")
 		}
 		return ExitError
 	}
 	defer f.Close()
 	if _, err := f.WriteString(initTemplate); err != nil {
-		fmt.Fprintln(a.Stderr, "skillguard init: writing .skillguard.yml failed")
+		a.errln("skillguard init: writing .skillguard.yml failed")
 		return ExitError
 	}
-	fmt.Fprintln(a.Stdout, "created .skillguard.yml")
+	a.outln("created .skillguard.yml")
 	return ExitOK
 }
 
 func (a *App) cmdVersion(args []string) int {
-	fs := flag.NewFlagSet("version", flag.ContinueOnError)
-	fs.SetOutput(a.Stderr)
-	if err := fs.Parse(args); err != nil {
+	fs := a.newFlagSet("version")
+	if err := fs.parse(args); err != nil {
 		return ExitError
 	}
-	fmt.Fprintf(a.Stdout, "skillguard %s\ncommit: %s\nbuilt: %s\ngo: %s\n",
+	a.outf("skillguard %s\ncommit: %s\nbuilt: %s\ngo: %s\n",
 		version.Version, version.Commit, version.Date, runtime.Version())
 	return ExitOK
 }
@@ -171,48 +168,55 @@ func (a *App) cmdVersion(args []string) int {
 // entrypoint contains no security logic of its own: the shell script simply
 // forwards three inputs and consumes three validated absolute paths.
 func (a *App) cmdActionPaths(args []string) int {
-	fs := flag.NewFlagSet("action-paths", flag.ContinueOnError)
-	fs.SetOutput(a.Stderr)
+	fs := a.newFlagSet("action-paths")
 	var (
 		workspace = fs.String("workspace", "", "absolute path of the CI workspace (required)")
 		pathIn    = fs.String("path", ".", "scan path, relative to the workspace")
 		configIn  = fs.String("config", "", "configuration file, relative to the workspace (optional)")
 		outputIn  = fs.String("output", "", "report destination, relative to the workspace (required)")
 	)
-	if err := fs.Parse(args); err != nil {
+	if err := fs.parse(args); err != nil {
 		return ExitError
 	}
 	if len(fs.Args()) > 0 {
-		fmt.Fprintln(a.Stderr, "skillguard action-paths: unexpected positional arguments")
+		a.errln("skillguard action-paths: unexpected positional arguments")
 		return ExitError
 	}
 
 	scan, err := actionpath.Resolve(*workspace, *pathIn, actionpath.KindScan)
 	if err != nil {
-		fmt.Fprintf(a.Stderr, "skillguard action-paths: %v\n", err)
+		a.errf("skillguard action-paths: %v\n", err)
 		return ExitError
 	}
 	var cfg actionpath.Result
 	if strings.TrimSpace(*configIn) != "" {
 		cfg, err = actionpath.Resolve(*workspace, *configIn, actionpath.KindConfig)
 		if err != nil {
-			fmt.Fprintf(a.Stderr, "skillguard action-paths: %v\n", err)
+			a.errf("skillguard action-paths: %v\n", err)
 			return ExitError
 		}
 	}
 	out, err := actionpath.Resolve(*workspace, *outputIn, actionpath.KindOutput)
 	if err != nil {
-		fmt.Fprintf(a.Stderr, "skillguard action-paths: %v\n", err)
+		a.errf("skillguard action-paths: %v\n", err)
 		return ExitError
 	}
 	if actionpath.SameTarget(out, scan) || actionpath.SameTarget(out, cfg) {
-		fmt.Fprintln(a.Stderr, "skillguard action-paths: output would overwrite an input file")
+		a.errln("skillguard action-paths: output would overwrite an input file")
 		return ExitError
 	}
 
-	fmt.Fprintf(a.Stdout, "path=%s\n", scan.Abs)
-	fmt.Fprintf(a.Stdout, "config=%s\n", cfg.Abs)
-	fmt.Fprintf(a.Stdout, "output=%s\n", out.Abs)
-	fmt.Fprintf(a.Stdout, "report-path=%s\n", out.Rel)
+	// Machine protocol, not human text: written verbatim through
+	// machineWriter, which validates instead of escaping. Using a.outf here
+	// would sanitize a legal path and hand the caller a different filename.
+	mw := a.newMachineWriter()
+	mw.Line("path", scan.Abs)
+	mw.Line("config", cfg.Abs)
+	mw.Line("output", out.Abs)
+	mw.Line("report-path", out.Rel)
+	if err := mw.Flush(); err != nil {
+		a.errf("skillguard action-paths: %v\n", err)
+		return ExitError
+	}
 	return ExitOK
 }
