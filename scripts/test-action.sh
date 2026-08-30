@@ -89,7 +89,17 @@ echo "--- machine protocol: the report lands on exactly the requested path ---"
 # key=value output is a machine protocol, so the entrypoint must carry it
 # through unmodified and the report must be written to the file the caller
 # asked for -- not to an escaped lookalike.
-BIDI="$(awk 'BEGIN{printf "%c%c%c", 226, 128, 174}')"
+BIDI="$(printf '\342\200\256')"
+# Built with printf, not awk. gawk in a UTF-8 locale treats a numeric %c as a
+# *wide character*, so "%c", 226 emits U+00E2 (two bytes) rather than the byte
+# 0xE2 -- and "%c", 128 emits U+0080, a C1 control that skillguard correctly
+# refuses. POSIX printf octal escapes are byte-exact in every locale. Assert it,
+# so a shell that ever gets this wrong says so instead of failing obscurely.
+bidi_bytes="$(printf '%s' "$BIDI" | wc -c | tr -d ' ')"
+if [ "$bidi_bytes" -ne 3 ]; then
+  echo "FAIL: the U+202E fixture is $bidi_bytes bytes, want 3 (e2 80 ae)"
+  fail=1
+fi
 BIDI_REL="reports/report${BIDI}gnp.json"
 run_case "bidi output path"          0 "safe-skill" "" "high" "json" "$BIDI_REL"
 if [ -s "$WS/$BIDI_REL" ]; then

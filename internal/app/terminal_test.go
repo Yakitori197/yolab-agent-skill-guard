@@ -123,6 +123,49 @@ func TestHostileCommandNameNeverEscapesToStderr(t *testing.T) {
 	assertNoRawEscape(t, "stderr", errb.String())
 }
 
+// The two facts the hostile-filename test rests on, checked with ordinary
+// names so they hold on every platform.
+//
+// Windows cannot create a file whose name contains ESC or a newline, so the
+// hostile case below runs on POSIX only. That made it possible for the fixture
+// to be wrong in a way nothing caught: an earlier version used a file ending in
+// ".env" and expected it to be reported as skipped, but the rule matches a file
+// *named* ".env" or starting with ".env.", so the file was silently ignored and
+// never reached the report at all. Every assertion then passed vacuously.
+func TestHostileFilenameFixturePremises(t *testing.T) {
+	root := t.TempDir()
+	writeTree(t, root, cleanSkill())
+	nl := string(rune(0x0a))
+	if err := os.WriteFile(filepath.Join(root, ".env.local"), []byte("SECRET=1"+nl), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "risky.md"), []byte(destructiveDoc()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	a, out, errb := newTestApp()
+	if code := a.Run([]string{"scan", root, "--format", "text", "--no-color"}); code != ExitFindings {
+		t.Fatalf("exit = %d, want 1 (stderr: %s)", code, errb.String())
+	}
+	got := out.String()
+	// A name the sensitivity rule really matches is reported as skipped.
+	if !strings.Contains(got, ".env.local") || !strings.Contains(got, "env-file-never-read") {
+		t.Fatalf("a .env.-prefixed file must appear in the skipped list:%s%s", nl, got)
+	}
+	// A document with a destructive command really produces a finding, so its
+	// path is printed as a header line.
+	if !strings.Contains(got, nl+"risky.md"+nl) {
+		t.Fatalf("the risky document must appear as a finding path header:%s%s", nl, got)
+	}
+}
+
+// destructiveDoc is a document that reliably triggers a finding, so a file
+// carrying it is guaranteed to appear in the report by path.
+func destructiveDoc() string {
+	nl := string(rune(0x0a))
+	return "# notes" + nl + nl + "```bash" + nl + "git reset --hard origin/main" + nl + "```" + nl
+}
+
 // The full pipeline with a hostile filename actually on disk: discovery reads
 // the name, it becomes Finding.Path or SkippedFile.Path, and the text report
 // must still be inert and structurally intact. Windows forbids these bytes in
@@ -136,13 +179,18 @@ func TestHostileFilenameOnDiskRendersInert(t *testing.T) {
 	writeTree(t, root, cleanSkill())
 	esc := string(rune(0x1b))
 	nl := string(rune(0x0a))
-	evil := filepath.Join(root, "ev"+esc+"[2Kil"+nl+"  1:1  critical  ASG004  forged.md")
-	if err := os.WriteFile(evil, []byte("# notes"+nl+nl+"nothing here"+nl), 0o644); err != nil {
+	quotedNL := string(rune(0x5c)) + "n"
+
+	// A scanned document whose *name* tries to forge a finding line. Its
+	// content triggers a real finding, so the name is printed as a path header
+	// -- without that the test would assert nothing.
+	evilName := "ev" + esc + "[2Kil" + nl + "  1:1  critical  ASG004  forged.md"
+	if err := os.WriteFile(filepath.Join(root, evilName), []byte(destructiveDoc()), 0o644); err != nil {
 		t.Skipf("this filesystem rejects the hostile filename: %v", err)
 	}
-	// A sensitive name that is reported but never read, also hostile.
-	evilEnv := filepath.Join(root, "we"+esc+"[31mird.env")
-	if err := os.WriteFile(evilEnv, []byte("SECRET=1"+nl), 0o644); err != nil {
+	// A name the sensitivity rule matches, so it is reported but never read.
+	evilEnvName := ".env." + esc + "[31mweird"
+	if err := os.WriteFile(filepath.Join(root, evilEnvName), []byte("SECRET=1"+nl), 0o644); err != nil {
 		t.Skipf("this filesystem rejects the hostile filename: %v", err)
 	}
 
@@ -152,6 +200,18 @@ func TestHostileFilenameOnDiskRendersInert(t *testing.T) {
 		t.Fatalf("exit = %d (stderr: %s)", code, errb.String())
 	}
 	got := out.String()
+
+	// Both hostile names must actually be in the output, or everything below
+	// would pass without testing anything.
+	wantFinding := "ev" + quotedESC + "[2Kil" + quotedNL + "  1:1  critical  ASG004  forged.md"
+	if !strings.Contains(got, wantFinding) {
+		t.Fatalf("the hostile document name must appear, escaped, as a path header:%s%s", nl, got)
+	}
+	wantSkipped := ".env." + quotedESC + "[31mweird"
+	if !strings.Contains(got, wantSkipped) {
+		t.Fatalf("the hostile sensitive name must appear, escaped, in the skipped list:%s%s", nl, got)
+	}
+
 	assertNoRawEscape(t, "text report", got)
 
 	lines := strings.Split(strings.TrimRight(got, nl), nl)
@@ -167,11 +227,11 @@ func TestHostileFilenameOnDiskRendersInert(t *testing.T) {
 	if summaries != 1 || results != 1 {
 		t.Fatalf("hostile filename disturbed the report structure (summary=%d result=%d):%s%s", summaries, results, nl, got)
 	}
-	if strings.Contains(got, nl+"  1:1  critical  ASG004  forged") {
-		t.Fatalf("a filename forged a finding line:%s%s", nl, got)
-	}
-	if !strings.Contains(got, quotedESC) {
-		t.Fatalf("the hostile filename should appear with a visible escape:%s%s", nl, got)
+	// The forged text stays inside one escaped line: no line of its own.
+	for _, l := range lines {
+		if strings.HasPrefix(strings.TrimSpace(l), "1:1  critical  ASG004  forged") {
+			t.Fatalf("a filename forged a finding line:%s%s", nl, got)
+		}
 	}
 }
 
